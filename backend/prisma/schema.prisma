@@ -1,0 +1,182 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  CLIENT
+  VIEWER
+}
+
+enum InternalStatus {
+  PENDIENTE_VALIDACION
+  VALIDADO
+}
+
+enum RenapaStatus {
+  VIGENTE
+  POR_VENCER
+  VENCIDO
+  NO_ENCONTRADO
+  ERROR
+}
+
+enum BarrelStatus {
+  DISPONIBLE
+  EN_ESTIVA
+  PROCESADO
+  DESPACHADO
+}
+
+enum RecepcionStatus {
+  PENDIENTE
+  FINALIZADA
+}
+
+enum AlertStatus {
+  ACTIVA
+  RESUELTA
+}
+
+model User {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  passwordHash   String
+  role           Role         @default(VIEWER)
+  enabledModules String[]     // e.g., ["apicultores", "scan", "estivas"]
+  apicultores    Apicultor[]  @relation("UserApicultores")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Apicultor {
+  id                 String           @id @default(cuid())
+  cuit               String           @unique
+  nombre             String
+  localidad          String?
+  provincia          String?
+  direccion          String?
+  email              String?
+  telefono           String?
+  status             InternalStatus   @default(PENDIENTE_VALIDACION)
+  numeroRenapa       String?
+  idSolicitudRenapa  String?
+  renapaStatus       RenapaStatus?
+  renapaVigenciaAt   DateTime?
+  renapaConsultadoAt DateTime?
+  notas              String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  
+  createdById        String
+  createdBy          User             @relation("UserApicultores", fields: [createdById], references: [id])
+  
+  renapaConsultas    RenapaConsulta[]
+  recepciones        Recepcion[]
+  alertas            Alert[]
+}
+
+model RenapaConsulta {
+  id                    String        @id @default(cuid())
+  apicultorId           String
+  apicultor             Apicultor     @relation(fields: [apicultorId], references: [id], onDelete: Cascade)
+  cuit                  String
+  status                RenapaStatus
+  vigenciaAt            DateTime?
+  consultadoAt          DateTime      @default(now())
+  certificadoDisponible Boolean       @default(false)
+  errorMessage          String?
+}
+
+model Barrel {
+  id           String        @id @default(cuid())
+  internalCode String        @unique
+  senasaCode   String?       @unique
+  lot          String?
+  status       BarrelStatus  @default(DISPONIBLE)
+  
+  recepcionId  String?
+  recepcion    Recepcion?    @relation(fields: [recepcionId], references: [id], onDelete: SetNull)
+  
+  estivaId     String?
+  estiva       Estiva?       @relation(fields: [estivaId], references: [id], onDelete: SetNull)
+  
+  positionRelation EstivaPosition?
+  
+  alertas      Alert[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Estiva {
+  id          String           @id @default(cuid())
+  code        String           @unique // e.g., E-01
+  type        String
+  capacity    Int              @default(20)
+  
+  warehouseId String
+  warehouse   Warehouse        @relation(fields: [warehouseId], references: [id])
+  
+  barrels     Barrel[]
+  positions   EstivaPosition[]
+  
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model EstivaPosition {
+  id        String   @id @default(cuid())
+  estivaId  String
+  estiva    Estiva   @relation(fields: [estivaId], references: [id], onDelete: Cascade)
+  
+  barrelId  String   @unique
+  barrel    Barrel   @relation(fields: [barrelId], references: [id], onDelete: Cascade)
+  
+  pairId    String   // Agrupador para los dos tambores colocados en la misma celda
+  level     Int      // Piso/Nivel (1-indexed)
+  position  Int      // Columna/Celda (1-indexed)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([estivaId, level, position, barrelId])
+}
+
+model Recepcion {
+  id            String          @id @default(cuid())
+  apicultorId   String
+  apicultor     Apicultor       @relation(fields: [apicultorId], references: [id])
+  status        RecepcionStatus @default(PENDIENTE)
+  pdfDisponible Boolean         @default(false)
+  barrels       Barrel[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Warehouse {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  location  String?
+  estivas   Estiva[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Alert {
+  id          String      @id @default(cuid())
+  apicultorId String?
+  apicultor   Apicultor?  @relation(fields: [apicultorId], references: [id], onDelete: Cascade)
+  
+  barrelId    String?
+  barrel      Barrel?     @relation(fields: [barrelId], references: [id], onDelete: Cascade)
+  
+  type        String      // e.g. "RENAPA_VENCIDO", "PARAMETRO_FUERA_DE_RANGO"
+  status      AlertStatus @default(ACTIVA)
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
