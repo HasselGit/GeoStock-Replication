@@ -1,10 +1,10 @@
 # GeoStock (GeoMiel) - Especificaciones Técnicas y de Diseño
 
-Este repositorio contiene el informe técnico de análisis, el esquema lógico estimado de base de datos y la guía de desarrollo detallada para replicar el sistema de trazabilidad de tambores de miel **GeoStock** (referenciado comercialmente como **GeoMiel**).
+Este repositorio contiene el informe técnico de análisis, el esquema lógico completo de base de datos y la guía de desarrollo detallada para replicar el sistema de trazabilidad de tambores de miel **GeoStock** (referenciado comercialmente como **GeoMiel**).
 
 ---
 
-## 1. Esquema Estimado de la Base de Datos
+## 1. Esquema Completo de la Base de Datos
 
 A partir del análisis de las llamadas de la API en el cliente (`/api/auth/me`, `/api/apicultores`, `/api/renapa`, `/api/barrels`, `/api/estivas`, `/api/recepciones`, `/api/alerts`), se deduce que el sistema utiliza un modelo relacional (por ejemplo, PostgreSQL o MySQL) mapeado mediante un ORM como Prisma (debido a la estructura de campos como `_count` y la convención de IDs tipo CUID o UUID).
 
@@ -13,15 +13,18 @@ El esquema de base de datos completo en formato Prisma se encuentra en [schema.p
 ### Tabla: `User` (Usuarios / Personal)
 Representa a los usuarios del sistema.
 * **`id`**: String (UUID / CUID con prefijo `usr_`) - Clave primaria.
-* **`email`**: String - Email del usuario, único.
+* **`email`**: String - Email o usuario, único (ej. `hespinosa`).
 * **`role`**: Enum (`ADMIN`, `CLIENT`, `VIEWER`) - Rol que determina los permisos en los módulos.
-* **`enabledModules`**: Array de Strings (ej. `["apicultores"]` para clientes, o todos los módulos para administradores).
+* **`enabledModules`**: Array de Strings (ej. `["dashboard", "apicultores", "recepciones", "tambores"]`).
 
 ### Tabla: `Apicultor` (Proveedores de Miel)
 Almacena la información de los apicultores (proveedores) y su estado de validación con RENAPA.
 * **`id`**: String (CUID) - Clave primaria.
 * **`cuit`**: String (11 dígitos, único) - Identificación fiscal.
 * **`nombre`**: String - Razón social o nombre completo.
+* **`codigoAp`**: String (Único, opcional) - Código interno de apicultor (ej. `AP00031`).
+* **`dni`**: String (Opcional)
+* **`codigoPostal`**: String (Opcional)
 * **`localidad`**: String (Opcional)
 * **`provincia`**: String (Opcional)
 * **`direccion`**: String (Opcional)
@@ -29,14 +32,14 @@ Almacena la información de los apicultores (proveedores) y su estado de validac
 * **`telefono`**: String (Opcional)
 * **`status`**: Enum (`PENDIENTE_VALIDACION`, `VALIDADO`) - Estado interno en GeoStock.
 * **`numeroRenapa`**: String (Opcional) - Número oficial otorgado.
-* **`idSolicitudRenapa`**: String (Opcional) - ID de solicitud.
+* **`idSolicitudRenapa`**: Int (Opcional) - Número de solicitud de RENAPA.
 * **`renapaStatus`**: Enum (`VIGENTE`, `POR_VENCER`, `VENCIDO`, `NO_ENCONTRADO`, `ERROR`) - Estado oficial de RENAPA.
 * **`renapaVigenciaAt`**: DateTime (Opcional) - Fecha de vencimiento del registro RENAPA.
 * **`renapaConsultadoAt`**: DateTime (Opcional) - Fecha de la última consulta en vivo.
 * **`notas`**: Text (Opcional)
 * **`createdAt`**: DateTime
 * **`updatedAt`**: DateTime
-* **`createdById`**: String - Clave foránea que referencia a `User(id)`.
+* **`createdById`**: String (Opcional) - Clave foránea que referencia a `User(id)`.
 
 ### Tabla: `RenapaConsulta` (Historial de Consultas de RENAPA)
 Historial de las consultas oficiales realizadas al padrón nacional.
@@ -49,27 +52,66 @@ Historial de las consultas oficiales realizadas al padrón nacional.
 * **`certificadoDisponible`**: Boolean - Indica si existe un PDF oficial descargable.
 * **`errorMessage`**: String (Opcional) - En caso de error en la consulta externa.
 
+### Tabla: `RangoColor` (Clasificación de Colores de Miel)
+* **`id`**: String (UUID) - Clave primaria.
+* **`codigo`**: String (Único) - Código de rango (ej. "41-45", "+70").
+* **`etiqueta`**: String - Etiqueta legible (ej. "41–45").
+
 ### Tabla: `Barrel` (Tambores de Miel)
-Tambores que contienen la miel recolectada y su ubicación física o estado.
+Tambores que contienen la miel recolectada con sus pesos, análisis físico-químicos y ubicación.
 * **`id`**: String (CUID) - Clave primaria.
 * **`internalCode`**: String (Único) - Código de barra o etiqueta interna.
 * **`senasaCode`**: String (Opcional) - Código oficial de SENASA.
+* **`height`**: String (Opcional) - Altura del tambor (ej. "NORMAL").
+* **`product`**: String (Opcional)
+* **`origin`**: String (Opcional) - Origen del lote (default "Argentina").
 * **`lot`**: String (Opcional) - Lote de producción.
-* **`status`**: Enum (`EN_ESTIVA`, `DISPONIBLE`, `PROCESADO`, etc.)
+* **`drumNumber`**: Int (Opcional)
+* **`pesoOrigen`**: Float (Opcional)
+* **`grossWeight`**: Float (Opcional) - Peso bruto.
+* **`netWeight`**: Float (Opcional) - Peso neto.
+* **`tara`**: Float (Opcional) - Peso del tambor vacío.
+* **`romaneo`**: String (Opcional) - Número de romaneo.
+* **`destination`**: String (Opcional)
+* **`supplier`**: String (Opcional)
+* **`apicultorId`**: String (Opcional) - Clave foránea que referencia a `Apicultor(id)`.
 * **`recepcionId`**: String (Opcional) - Clave foránea que referencia a `Recepcion(id)`.
-* **`estivaId`**: String (Opcional) - Clave foránea que referencia a `Estiva(id)` (si está apilado).
+* **`ordenCompraId`**: String (Opcional)
+* **`calidad`**: String (Opcional)
+* **`color`**: Float (Opcional) - Medida de color.
+* **`humedad`**: Float (Opcional) - Porcentaje de humedad.
+* **`hmf`**: Float (Opcional) - Porcentaje de HMF.
+* **`fechaDeposito`**: DateTime (Opcional)
+* **`fechaRemuestreo`**: DateTime (Opcional)
+* **`rangoColorId`**: String (Opcional) - Clave foránea que referencia a `RangoColor(id)`.
+* **`clasificacion`**: String (Opcional) - Clasificación del depósito (ej. "GEO_EXPO").
+* **`fechaIngresoDeposito`**: DateTime (Opcional)
+* **`status`**: Enum (`DISPONIBLE`, `EN_ESTIVA`, `PROCESADO`, `DESPACHADO`)
+* **`senasaStatus`**: String (Opcional)
+* **`senasaConsultadoAt`**: DateTime (Opcional)
 * **`createdAt`**: DateTime
 * **`updatedAt`**: DateTime
 
 ### Tabla: `Estiva` (Estructuras de Apilamiento / Celdas de Almacén)
 Estructuras físicas organizadas en celdas de almacenamiento donde se colocan los tambores en formato de pares (dos por nivel y posición).
 * **`id`**: String (CUID) - Clave primaria.
-* **`code`**: String (Único) - Identificador de la estiba (ej. E-01).
+* **`code`**: String (Único) - Identificador de la estiba (ej. E-080).
 * **`type`**: String - Tipo de estiba.
 * **`capacity`**: Integer - Capacidad máxima.
 * **`warehouseId`**: String - Clave foránea que referencia a `Warehouse(id)`.
 * **`createdAt`**: DateTime
 * **`updatedAt`**: DateTime
+
+### Tabla: `EstivaPosition` (Posición de Tambores en Estiva)
+Coordenada de almacenamiento físico exacta para un tambor y su fecha de colocación y retiro.
+* **`id`**: String (CUID) - Clave primaria.
+* **`estivaId`**: String - Clave foránea a `Estiva(id)`.
+* **`barrelId`**: String - Clave foránea a `Barrel(id)`.
+* **`pairId`**: String - Agrupador UUID para los dos tambores de la misma celda.
+* **`level`**: Int - Piso/Nivel (1-indexed).
+* **`position`**: Int - Columna/Celda (1-indexed).
+* **`placedAt`**: DateTime - Fecha de colocación.
+* **`removedAt`**: DateTime (Opcional) - Fecha de retiro.
 
 ### Tabla: `Recepcion` (Ingresos de Mercadería)
 Documentos de recepción de lotes de tambores de apicultores.
@@ -82,17 +124,23 @@ Documentos de recepción de lotes de tambores de apicultores.
 
 ### Tabla: `Warehouse` (Depósitos / Bodegas)
 * **`id`**: String (CUID) - Clave primaria.
-* **`name`**: String - Nombre del depósito (ej. "Nave Principal").
-* **`location`**: String (Opcional)
+* **`codigo`**: String (Único) - Código abreviado (ej. "PI").
+* **`name`**: String - Nombre del depósito (ej. "Parque Industrial").
 
-### Tabla: `Alert` (Alertas de Control y Calidad)
+### Tabla: `ScanEvent` (Auditoría de Escaneo)
+Historial de eventos de escaneo.
 * **`id`**: String (CUID) - Clave primaria.
-* **`apicultorId`**: String (Opcional) - Clave foránea que referencia a `Apicultor(id)`.
-* **`barrelId`**: String (Opcional) - Clave foránea que referencia a `Barrel(id)`.
-* **`type`**: String (ej. "RENAPA_VENCIDO", "EXCESO_TIEMPO")
-* **`status`**: Enum (`ACTIVA`, `RESUELTA`)
+* **`barrelId`**: String - Clave foránea a `Barrel(id)`.
+* **`type`**: String - Tipo de evento ("INGRESO", "ARMADO", "DESARMADO").
+* **`payload`**: String (Opcional) - Detalles en formato JSON.
 * **`createdAt`**: DateTime
-* **`updatedAt`**: DateTime
+
+### Tabla: `ConsultaSenasa` (Auditoría de Consultas SENASA)
+* **`id`**: String (CUID) - Clave primaria.
+* **`barrelId`**: String - Clave foránea a `Barrel(id)`.
+* **`status`**: String
+* **`errorMessage`**: String (Opcional)
+* **`createdAt`**: DateTime
 
 ---
 
@@ -153,7 +201,7 @@ Para desarrollar este proyecto de forma automática o asistida por un agente de 
 │   ├── prisma/
 │   │   └── schema.prisma        # Definición de Base de Datos
 │   ├── src/
-│   │   ├── controllers/         # Lógica de endpoints (Auth, Scan, Apicultores)
+│   │   ├── controllers/         # Lógica de endpoints (Auth, Scan, Apicultores, Tambores)
 │   │   ├── middleware/          # Validación de Roles y Cookies de sesión
 │   │   └── index.js             # Entrada del servidor (Express)
 │   ├── package.json
@@ -162,7 +210,7 @@ Para desarrollar este proyecto de forma automática o asistida por un agente de 
 │   ├── src/
 │   │   ├── components/          # Topbar, Sidebar, UI Elements (Radix/Tailwind)
 │   │   ├── context/             # AuthContext, ScanContext
-│   │   ├── pages/               # Login, Apicultores, Scan, Estivas
+│   │   ├── pages/               # Login, Apicultores, Scan, Estivas, Tambores
 │   │   └── App.tsx
 │   ├── tailwind.config.js
 │   ├── package.json
@@ -176,10 +224,12 @@ El agente de IA deberá proveer controladores Express que implementen:
 3. `GET /api/apicultores?search=&status=&skip=&take=`: Búsqueda y listado paginado de apicultores.
 4. `POST /api/apicultores`: Creación de un apicultor, con validación de CUIT usando el algoritmo de módulo 11.
 5. `POST /api/apicultores/:id/validar`: Realiza la validación cruzada con RENAPA y pasa el estado a `VALIDADO`.
-6. `POST /api/scan/armado`: `{ estivaId, barrelCodes: [c1, c2], level, position }`. Asocia un par de tambores a la celda.
-7. `POST /api/scan/desarmado`: `{ estivaId, barrelCodes: [c1, c2] }`. Desvincula los tambores de la estiba.
-8. `GET /api/scan/suggest/:estivaId`: Retorna la siguiente celda disponible `{ level, position }`.
-9. `GET /api/scan/desarmado/suggest/:estivaId`: Sugiere el par superior a retirar.
+6. `GET /api/barrels?search=&status=&skip=&take=`: Búsqueda y listado de tambores.
+7. `GET /api/barrels/:id`: Retorna detalles de un tambor, incluyendo su apicultor, rango de color e historial de posiciones.
+8. `POST /api/scan/armado`: `{ estivaId, barrelCodes: [c1, c2], level, position }`. Asocia un par de tambores a la celda.
+9. `POST /api/scan/desarmado`: `{ estivaId, barrelCodes: [c1, c2] }`. Desvincula los tambores de la estiba.
+10. `GET /api/scan/suggest/:estivaId`: Retorna la siguiente celda disponible `{ level, position }`.
+11. `GET /api/scan/desarmado/suggest/:estivaId`: Sugiere el par superior a retirar.
 
 ### Componentes Frontend Críticos
 El agente de IA deberá generar los componentes React con soporte para TypeScript:
