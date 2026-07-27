@@ -28,12 +28,14 @@ enum RenapaStatus {
 
 enum BarrelStatus {
   DISPONIBLE
+  PESADO
   EN_ESTIVA
   PROCESADO
   DESPACHADO
 }
 
 enum RecepcionStatus {
+  BORRADOR
   PENDIENTE
   FINALIZADA
 }
@@ -44,11 +46,11 @@ enum AlertStatus {
 }
 
 model User {
-  id             String       @id @default(cuid())
+  id             String       @id @default(cuid()) // usr_ prefijo se maneja por código
   email          String       @unique
   passwordHash   String
   role           Role         @default(VIEWER)
-  enabledModules String[]     // e.g., ["apicultores", "scan", "estivas", "recepciones", "tambores", "dashboard"]
+  enabledModules String[]     // e.g., ["dashboard", "compra", "apicultores", "recepciones", "tambores", "almacenes", "logistica", "laboratorio"]
   apicultores    Apicultor[]  @relation("UserApicultores")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -83,6 +85,7 @@ model Apicultor {
   recepciones        Recepcion[]
   alertas            Alert[]
   barrels            Barrel[]
+  ordenesCompra      OrdenCompra[]    @relation("ApicultorProductorOrdenes")
 }
 
 model RenapaConsulta {
@@ -128,7 +131,10 @@ model Barrel {
   recepcion            Recepcion?       @relation(fields: [recepcionId], references: [id], onDelete: SetNull)
   
   ordenCompraId        String?
-  calidad              String?
+  ordenCompra          OrdenCompra?     @relation(fields: [ordenCompraId], references: [id], onDelete: SetNull)
+  
+  calidad              String?          // e.g. "CLARA"
+  calidadSugerida      String?
   color                Float?
   humedad              Float?
   hmf                  Float?
@@ -155,7 +161,7 @@ model Barrel {
 
 model Estiva {
   id          String           @id @default(cuid())
-  code        String           @unique // e.g., E-01
+  code        String           @unique // e.g., E-080
   type        String
   capacity    Int              @default(20)
   
@@ -187,23 +193,44 @@ model EstivaPosition {
 }
 
 model Recepcion {
-  id            String          @id @default(cuid())
-  apicultorId   String
-  apicultor     Apicultor       @relation(fields: [apicultorId], references: [id])
-  status        RecepcionStatus @default(PENDIENTE)
-  pdfDisponible Boolean         @default(false)
-  barrels       Barrel[]
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id               String          @id @default(cuid())
+  numero           String          @unique // e.g. R-2026-0004
+  numeroRemito     String?
+  fecha            DateTime        @default(now())
+  transportista    String?
+  localidadOrigen  String?
+  personaEntrega   String?
+  facturante       String?
+  observaciones    String?
+  status           RecepcionStatus @default(BORRADOR)
+  tamboresEsperados Int            @default(0)
+  pdfDisponible    Boolean         @default(false)
+  
+  apicultorId      String
+  apicultor        Apicultor       @relation(fields: [apicultorId], references: [id])
+  
+  barrels          Barrel[]
+  
+  createdById      String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 }
 
 model Warehouse {
-  id        String   @id @default(cuid())
-  codigo    String   @unique // e.g. "PI"
-  name      String
-  estivas   Estiva[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String        @id @default(cuid())
+  codigo       String        @unique // e.g. "PI"
+  name         String
+  tipo         String        @default("FISICO") // FISICO, VIRTUAL, TERCERO
+  ubicacion    String?
+  activo       Boolean       @default(true)
+  
+  estivas      Estiva[]
+  movimientos  Movimiento[]
+  
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  @@map("almacenes")
 }
 
 model Alert {
@@ -237,4 +264,274 @@ model ConsultaSenasa {
   status       String
   errorMessage String?
   createdAt    DateTime @default(now())
+}
+
+// ==========================================
+// NUEVO: Módulo Compra
+// ==========================================
+
+model Emisor {
+  id               String        @id @default(cuid())
+  codigo           String        @unique
+  cuit             String        @unique
+  razonSocial      String
+  inscriptoArca    Boolean       @default(false)
+  numeroRenapa     String?
+  renapaStatus     String?
+  renapaVigenciaAt DateTime?
+  email            String?
+  telefono         String?
+  direccion        String?
+  localidad        String?
+  provincia        String?
+  finnegansId      String?
+  notas            String?
+  
+  ordenesCompra    OrdenCompra[]
+  
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  
+  @@map("emisores")
+}
+
+model OrdenCompra {
+  id                         String        @id @default(cuid())
+  codigo                     String        @unique // e.g., OC-2024025
+  workflow                   String        @default("W1")
+  tipo                       String        @default("MIEL")
+  estado                     String        @default("BORRADOR") // e.g., CANCELADA, LIQUIDADA
+  fechaEmision               DateTime      @default(now())
+  
+  apicultorProductorId       String
+  apicultorProductor         Apicultor     @relation("ApicultorProductorOrdenes", fields: [apicultorProductorId], references: [id])
+  
+  emisorId                   String?
+  emisor                     Emisor?       @relation(fields: [emisorId], references: [id], onDelete: SetNull)
+  
+  precioOscura               Float?
+  precioIntermedia           Float?
+  precioClara                Float?
+  precioUnitario             Float?
+  tamboresTeoricos           Int?
+  kgPorTambor                Float         @default(290)
+  tcmVende                   Float?
+  tcmRecibidos               Float?
+  responsabilidadTrazabilidad String?      // e.g. "APICULTOR"
+  responsabilidadExtraccion   String?      // e.g. "APICULTOR"
+  comisionista               String?
+  importeLiquidacion         Float?
+  observaciones              String?
+  
+  createdById                String?
+  
+  barrels                    Barrel[]
+  facturas                   Factura[]
+  
+  createdAt                  DateTime      @default(now())
+  updatedAt                  DateTime      @updatedAt
+  
+  @@map("ordenes_compra")
+}
+
+model Factura {
+  id                 String       @id @default(cuid())
+  numero             String       @unique
+  tipo               String       @default("UNICA")
+  fecha              DateTime
+  importe            Float
+  kg                 Float
+  tambores           Int          // Cantidad de tambores asociados
+  
+  ordenCompraId      String
+  ordenCompra        OrdenCompra  @relation(fields: [ordenCompraId], references: [id], onDelete: Cascade)
+  
+  observaciones      String?
+  finnegansEstado    String?
+  finnegansId        String?
+  finnegansError     String?
+  finnegansEnviadaAt DateTime?
+  
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  
+  @@map("facturas")
+}
+
+// ==========================================
+// NUEVO: Módulo Almacenes (Existencias y Movimientos)
+// ==========================================
+
+model Referencia {
+  id           String       @id @default(cuid())
+  codigo       String       @unique
+  descripcion  String
+  unidadMedida String       @default("U")
+  activo       Boolean      @default(true)
+  
+  movimientos  Movimiento[]
+  
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  
+  @@map("referencias")
+}
+
+model Movimiento {
+  id            String     @id @default(cuid())
+  tipo          String     // e.g., "INGRESO", "EGRESO", "AJUSTE"
+  cantidad      Float
+  fecha         DateTime   @default(now())
+  
+  warehouseId   String
+  warehouse     Warehouse  @relation(fields: [warehouseId], references: [id])
+  
+  referenciaId  String
+  referencia    Referencia @relation(fields: [referenciaId], references: [id])
+  
+  observaciones String?
+  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
+  @@map("movimientos")
+}
+
+// ==========================================
+// NUEVO: Módulo Logística
+// ==========================================
+
+model Chofer {
+  id        String   @id @default(cuid())
+  nombre    String
+  cuit      String   @unique
+  licencia  String?
+  telefono  String?
+  activo    Boolean  @default(true)
+  viajes    Viaje[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("choferes")
+}
+
+model SolicitudLogistica {
+  id            String   @id @default(cuid())
+  numero        String   @unique
+  fechaRequest  DateTime @default(now())
+  tipoCarga     String
+  cantidad      Float
+  origen        String
+  destino       String
+  estado        String   @default("PENDIENTE") // PENDIENTE, ASIGNADA, COMPLETADA
+  
+  viajeId       String?
+  viaje         Viaje?   @relation(fields: [viajeId], references: [id], onDelete: SetNull)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("solicitudes_logistica")
+}
+
+model Carga {
+  id          String   @id @default(cuid())
+  numero      String   @unique
+  patente     String?
+  acoplado    String?
+  fechaCarga  DateTime @default(now())
+  estado      String   @default("EN_PROCESO") // EN_PROCESO, TERMINADA
+  
+  viajeId     String?  @unique
+  viaje       Viaje?   @relation(fields: [viajeId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("cargas_logistica")
+}
+
+model Viaje {
+  id             String               @id @default(cuid())
+  numero         String               @unique
+  fechaSalida    DateTime?
+  estado         String               @default("PLANIFICADO") // PLANIFICADO, EN_CURSO, COMPLETADO, CANCELADO
+  
+  choferId       String?
+  chofer         Chofer?              @relation(fields: [choferId], references: [id], onDelete: SetNull)
+  
+  carga          Carga?
+  solicitudes    SolicitudLogistica[]
+  
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  
+  @@map("viajes_logistica")
+}
+
+model Remito {
+  id          String   @id @default(cuid())
+  numero      String   @unique
+  fecha       DateTime @default(now())
+  destinatario String
+  direccion   String?
+  ciudad      String?
+  provincia   String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("remitos_logistica")
+}
+
+// ==========================================
+// NUEVO: Módulo Laboratorio
+// ==========================================
+
+model LaboratorioOrden {
+  id            String               @id @default(cuid())
+  numero        String               @unique
+  estado        String               @default("PENDIENTE") // PENDIENTE, EN_ANALISIS, COMPLETADA
+  fechaInicio   DateTime?
+  observaciones String?
+  
+  lotes         LaboratorioLote[]
+  muestras      LaboratorioMuestra[]
+  
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  
+  @@map("ordenes_laboratorio")
+}
+
+model LaboratorioLote {
+  id          String           @id @default(cuid())
+  numero      String           @unique
+  estado      String           @default("PENDIENTE")
+  
+  ordenId     String
+  orden       LaboratorioOrden @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  
+  @@map("lotes_laboratorio")
+}
+
+model LaboratorioMuestra {
+  id            String           @id @default(cuid())
+  codigo        String           @unique
+  parametro1    Float?           // color
+  parametro2    Float?           // humedad
+  parametro3    Float?           // hmf
+  aprobado      Boolean          @default(false)
+  fechaAnalisis DateTime?
+  
+  ordenId       String
+  orden         LaboratorioOrden @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  
+  @@map("muestras_laboratorio")
 }

@@ -17,8 +17,9 @@ Este archivo contiene las reglas y directrices obligatorias para todos los agent
 
 *   **Esquema Prisma**: Queda terminantemente prohibido modificar el esquema de base de datos de manera que rompa las relaciones clave:
     *   `Apicultor` debe poseer una relación obligatoria de validación con `RenapaConsulta` para el historial de auditoría.
-    *   `Barrel` (Tambor) debe estar opcionalmente asociado a `Estiva` (celda física) y `Recepcion` (lote de ingreso).
+    *   `Barrel` (Tambor) debe estar opcionalmente asociado a `Estiva` (celda física), `Recepcion` (lote de ingreso) y `OrdenCompra` (orden de compra asignada).
     *   `EstivaPosition` debe coordinar la celda física exacta de un tambor (`level` y `position`) y agruparlos en parejas mediante un `pairId`.
+    *   `Factura` debe estar obligatoriamente relacionada a una `OrdenCompra`.
 *   **IDs**: Todos los identificadores únicos (`id`) deben seguir el estándar CUID. Los usuarios deben llevar el prefijo `usr_`.
 
 ---
@@ -41,6 +42,10 @@ Toda entrada de CUIT en altas de apicultores o consultas debe ser validada media
 *   La API del backend debe calcular dinámicamente qué tambores son removibles (`removableBarrelIds`). Si el operario escanea un tambor que no se encuentra en esta lista, la UI **debe** arrojar el error: `"Retirás primero tambores superiores"`.
 *   **Validación de Compañero**: El escaneo requiere el retiro del par completo. Si el operario escanea el primer tambor de una celda, el segundo tambor escaneado **debe** corresponder al compañero del mismo `pairId` registrado. Si no coincide, la UI **debe** arrojar el error: `"[Código] no es el par del primero. Escaneá el compañero."`.
 
+### D. Módulo de Compras (Liquidación e Integración ERP)
+*   **Liquidación de Precios**: La liquidación se debe calcular sumando el importe de los tambores según su clasificación por calidad físico-química (`CLARA`, `INTERMEDIA`, `OSCURA`), multiplicando el precio respectivo definido en la orden por los kilos netos del tambor.
+*   **Integración Finnegans**: Las solicitudes de push deben registrar el estado exacto del ERP (`finnegansEstado`, `finnegansId`, `finnegansError`) en la base de datos de facturas para auditoría fiscal.
+
 ---
 
 ## 4. Estética y Experiencia de Usuario (UI/UX)
@@ -48,6 +53,6 @@ Toda entrada de CUIT en altas de apicultores o consultas debe ser validada media
 *   **Paleta de Colores**: Tema oscuro moderno y premium. El color de fondo principal debe ser `#08090A`.
 *   **Tipografía**:
     *   Textos generales: **Inter**.
-    *   Códigos de barras, CUITs, números y celdas: **Commit Mono** (para fácil lectura en entornos de almacén).
+    *   Códigos de barras, CUITs, números, importes y celdas: **Commit Mono** (para fácil lectura en entornos de almacén).
 *   **Componentes UI**: Utilizar primitivas headless de **Radix UI** para interactivos complejos (Dropdowns, Modales, Comboboxes) estilizados con **Tailwind CSS**.
 *   **Lector**: Las interfaces de escáner deben admitir tanto entrada por escáner de hardware (mediante emulación de teclado con evento Enter) como la introducción manual de códigos en caso de fallas de lectura.
