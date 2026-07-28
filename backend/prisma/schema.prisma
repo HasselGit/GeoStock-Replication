@@ -104,6 +104,8 @@ model RangoColor {
   id        String   @id @default(uuid())
   codigo    String   @unique // e.g. "41-45", "+70"
   etiqueta  String   // e.g. "41–45", "+70"
+  min       Float?
+  max       Float?
   barrels   Barrel[]
 }
 
