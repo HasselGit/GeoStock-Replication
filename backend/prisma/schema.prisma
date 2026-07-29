@@ -368,10 +368,11 @@ model Referencia {
   id           String       @id @default(cuid())
   codigo       String       @unique
   descripcion  String
-  unidadMedida String       @default("U")
+  unidad       String       @default("u")
   activo       Boolean      @default(true)
   
   movimientos  Movimiento[]
+  envasesCera  EnvaseCera[]
   
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -397,6 +398,31 @@ model Movimiento {
   updatedAt     DateTime   @updatedAt
   
   @@map("movimientos")
+}
+
+model EnvaseCera {
+  id            String      @id @default(cuid())
+  codigo        String      @unique
+  tipo          String      // e.g., PALLET, BOLSON
+  pesoBruto     Float
+  tara          Float
+  pesoNeto      Float
+  estado        String      @default("EN_DEPOSITO") // EN_DEPOSITO, EXPORTADO
+  exportadoAt   DateTime?
+  fecha         DateTime    @default(now())
+  observaciones String?
+  activo        Boolean     @default(true)
+  
+  referenciaId  String
+  referencia    Referencia  @relation(fields: [referenciaId], references: [id])
+  
+  warehouseId   String
+  warehouse     Warehouse   @relation(fields: [warehouseId], references: [id])
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  @@map("envases_cera")
 }
 
 // ==========================================
@@ -532,8 +558,22 @@ model LaboratorioMuestra {
   ordenId       String
   orden         LaboratorioOrden @relation(fields: [ordenId], references: [id], onDelete: Cascade)
   
+  canastoId     String?
+  canasto       Canasto?         @relation(fields: [canastoId], references: [id], onDelete: SetNull)
+  
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   
   @@map("muestras_laboratorio")
+}
+
+model Canasto {
+  id        String               @id @default(cuid())
+  rotulo    String               @unique
+  activo    Boolean              @default(true)
+  muestras  LaboratorioMuestra[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  
+  @@map("canastos")
 }
