@@ -31,40 +31,49 @@ El esquema de base de datos completo en formato Prisma se encuentra en [schema.p
 
 ### Módulo: Compras y Facturación
 *   **`Emisor`**: Proveedor fiscal de la orden de compra. Contiene CUIT, razón social, estado en ARCA (`inscriptoArca`), número de RENAPA, ID en Finnegans y datos de contacto.
-*   **`OrdenCompra`**: Código (`OC-2024024`), workflow (`W1`, `W2`), tipo (`MIEL`), estado (`BORRADOR`, `LIQUIDADA`, `CANCELADA`), precios estipulados por calidad (`precioClara`, `precioIntermedia`, `precioOscura`), tara teórica por tambor, kg, comisionista y observaciones.
+*   **`OrdenCompra`**: Código (`OC-2024024`), workflow (`W1`, `W2`), tipo (`MIEL`), estado (`BORRADOR`, `LIQUIDADA`, `CANCELADA`), precios estipulados por calidad (`precioClara`, `precioIntermedia`, `precioOscura`), tara teórica por tambor, kg, comisionista y observaciones. Permite borrado explícito (`DELETE /compra/ordenes/:id`).
 *   **`Factura`**: Involucra el número de factura, tipo (`UNICA`), importe, kg, tambores facturados, y campos de control de integración con Finnegans (`finnegansEstado`, `finnegansId`, `finnegansError`).
 
-### Módulo: Almacenes e Inventarios (Actualizado)
+### Módulo: Almacenes e Inventarios
 *   **`Referencia`**: Catálogo de insumos o materiales de stock (ej. `R-009` para "Cera Operculo", unidad `kg`).
 *   **`Movimiento`**: Transacciones de inventario en depósitos (tipo `INGRESO`, `EGRESO`, `AJUSTE`, cantidad, fecha y observaciones).
-*   **`EnvaseCera`** (Nuevo): Registro de envases de cera procesados en depósitos (código, tipo `PALLET`/`BOLSON`, pesoBruto, tara, pesoNeto, estado `EN_DEPOSITO`/`EXPORTADO`, fecha y observaciones).
+*   **`EnvaseCera`**: Registro de envases de cera procesados en depósitos (código, tipo `PALLET`/`BOLSON`, pesoBruto, tara, pesoNeto, estado `EN_DEPOSITO`/`EXPORTADO`, fecha y observaciones).
 
-### Módulo: Logística y Traslados
+### Módulo: Logística, Reservas de Stock y Remitos (Actualizado)
 *   **`Chofer`**: Conductor del camión (nombre, CUIT, licencia, teléfono y activo).
 *   **`SolicitudLogistica`**: Pedido de traslado (número, fecha, tipo de carga, origen, destino y estado).
 *   **`Carga`**: Precinto y patente del camión (patente, acoplado, fecha y estado).
 *   **`Viaje`**: Planificación de viaje que asocia chofer, carga y múltiples solicitudes logísticas.
-*   **`Remito`**: Remisión de transporte oficial.
+*   **`Remito`**: Remisión de transporte oficial con soporte para firma digital (`firmaUrl`, `firmadoAt`, `firmadoPor`).
+*   **`ReservaStock`** (Nuevo): Control de apartado de existencias previas al despacho (`referenciaId`, `warehouseId`, `cantidad`, `estado` `ACTIVA`/`CONSUMIDA`/`CANCELADA`, opcionalmente asociada a una `SolicitudLogistica`).
 
-### Módulo: Laboratorio y Canastos (Actualizado)
+### Módulo: Laboratorio y Canastos
 *   **`LaboratorioOrden`**: Órdenes de análisis clínico de calidad.
 *   **`LaboratorioLote`**: Lotes agrupados para análisis de miel.
 *   **`LaboratorioMuestra`**: Parámetros de laboratorio del tambor (color, humedad, HMF, aprobado, fecha) asociado opcionalmente a un canasto.
-*   **`Canasto`** (Nuevo): Agrupación física de muestras clínicas (canastos/racks de ensayo) rotulado con un código predictivo sugerido por el sistema (`sugerirRotuloCanasto`).
+*   **`Canasto`**: Agrupación física de muestras clínicas (canastos/racks de ensayo) rotulado con un código predictivo sugerido por el sistema (`sugerirRotuloCanasto`).
 
 ---
 
 ## 2. Contratos de la API y Flujos de Integración
 
-### A. Impresión Física de Etiquetas (ZPL)
-El backend cuenta con el endpoint `GET /api/barrels/:id/etiqueta` que devuelve una cadena en formato **ZPL** (Zebra Programming Language) lista para impresoras térmicas Zebra, la cual dibuja los códigos de barra y detalles de pesaje del tambor.
+### A. Reservas de Stock y Cálculo de Disponible (Nuevo 30 Julio)
+*   `GET /api/logistica/reservas`: Listado de reservas activas de inventario.
+*   `POST /api/logistica/reservas`: `{ referenciaId, warehouseId, cantidad, solicitudId, observaciones }` $\rightarrow$ Registra el apartado de stock.
+*   `POST /api/logistica/reservas/:id/consumir`: Descuenta físicamente la reserva al concretar la carga.
+*   `POST /api/logistica/reservas/:id/cancelar`: Libera el stock apartado.
+*   `GET /api/logistica/stock-disponible?referenciaId=...&warehouseId=...`: Retorna la fórmula de cálculo del inventario usable real: `{ total, reservado, enCarga, comprometido, disponible }`.
 
-### B. Módulo de Cera y Canastos
-*   **Cera**: `/api/almacenes/envases-cera` (POST para crear y GET para listar con cálculos consolidados de cantidades y kilos de bolsones/pallets), `/api/almacenes/envases-cera/:id/exportar` (POST).
-*   **Canastos**: `/api/laboratorio/canastos` (GET, POST), `/api/laboratorio/canastos/:id` (GET, PATCH), `/api/laboratorio/canastos/:id/archivar` (POST), y `/api/laboratorio/canastos/:id/muestras/:muestraId` (DELETE).
+### B. Firma Digital y Contexto de Remito (Nuevo 30 Julio)
+*   `GET /api/logistica/viajes/:id/contexto-remito`: Datos consolidados para confeccionar la documentación del viaje.
+*   `POST /api/logistica/remitos/:id/firma`: `{ firmaUrl, firmadoPor }` $\rightarrow$ Registra la conformidad de entrega.
 
-### C. Lógica de Pesaje de Tambores
-El flujo de recepción incluye `/api/barrels/pesaje/buscar?code=...` para buscar tambores ingresados y `POST /api/barrels/pesaje/:id/confirmar` para asentar el peso neto y bruto final.
+### C. Impresión Física de Etiquetas (ZPL)
+El backend cuenta con el endpoint `GET /api/barrels/:id/etiqueta` que devuelve una cadena en formato **ZPL** (Zebra Programming Language) lista para impresoras térmicas Zebra.
+
+### D. Módulo de Cera y Canastos
+*   **Cera**: `/api/almacenes/envases-cera` (POST, GET), `/api/almacenes/envases-cera/:id/exportar` (POST).
+*   **Canastos**: `/api/laboratorio/canastos` (GET, POST), `/api/laboratorio/canastos/:id` (GET, PATCH), `/api/laboratorio/canastos/:id/archivar` (POST).
 
 ---
 
@@ -72,7 +81,7 @@ El flujo de recepción incluye `/api/barrels/pesaje/buscar?code=...` para buscar
 
 ### Estructura de Rutas API a Implementar
 1.  **Auth**: `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`.
-2.  **Compras**: `/api/compra/emisores`, `/api/compra/ordenes` (GET, POST, PATCH), `/api/compra/ordenes/:id/tambores` (POST, DELETE), `/api/compra/tambores/:id/calidad` (PATCH), `/api/compra/ordenes/:id/facturas` (POST, DELETE), `/api/compra/ordenes/:id/finnegans/push` (POST).
-3.  **Almacenes**: `/api/almacenes`, `/api/almacenes/referencias` (GET, POST, PATCH), `/api/almacenes/existencias` (GET), `/api/almacenes/referencias/:id/movimientos` (GET), `/api/almacenes/movimientos` (POST), `/api/almacenes/envases-cera` (GET, POST), `/api/almacenes/envases-cera/:id/exportar` (POST), `/api/almacenes/envases-cera/:id` (DELETE).
-4.  **Logística**: `/api/logistica/choferes`, `/api/logistica/solicitudes`, `/api/logistica/cargas`, `/api/logistica/viajes` (GET, POST, PATCH), `/api/logistica/viajes/:id/solicitudes` (POST, DELETE), `/api/logistica/remitos`.
+2.  **Compras**: `/api/compra/emisores`, `/api/compra/ordenes` (GET, POST, PATCH, DELETE), `/api/compra/ordenes/:id/tambores` (POST, DELETE), `/api/compra/tambores/:id/calidad` (PATCH), `/api/compra/ordenes/:id/facturas` (POST, DELETE), `/api/compra/ordenes/:id/finnegans/push` (POST).
+3.  **Almacenes**: `/api/almacenes`, `/api/almacenes/referencias` (GET, POST, PATCH), `/api/almacenes/existencias` (GET), `/api/almacenes/referencias/:id/movimientos` (GET), `/api/almacenes/movimientos` (POST), `/api/almacenes/envases-cera` (GET, POST), `/api/almacenes/envases-cera/:id/exportar` (POST).
+4.  **Logística y Reservas**: `/api/logistica/choferes`, `/api/logistica/solicitudes` (GET, POST, DELETE), `/api/logistica/cargas`, `/api/logistica/viajes` (GET, POST, PATCH), `/api/logistica/viajes/:id/solicitudes` (POST, DELETE), `/api/logistica/remitos` (GET, POST, DELETE, POST `/firma`), `/api/logistica/reservas` (GET, POST, POST `/consumir`, POST `/cancelar`), `/api/logistica/stock-disponible` (GET).
 5.  **Laboratorio**: `/api/laboratorio/ordenes`, `/api/laboratorio/iniciar` (POST), `/api/laboratorio/muestras/:id` (PATCH), `/api/laboratorio/ordenes/:id/validar-muestra` (POST), `/api/laboratorio/canastos` (GET, POST), `/api/laboratorio/canastos/:id` (GET, PATCH, DELETE, POST `/archivar`).

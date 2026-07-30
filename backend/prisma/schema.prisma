@@ -373,6 +373,7 @@ model Referencia {
   
   movimientos  Movimiento[]
   envasesCera  EnvaseCera[]
+  reservas     ReservaStock[]
   
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -444,20 +445,22 @@ model Chofer {
 }
 
 model SolicitudLogistica {
-  id            String   @id @default(cuid())
-  numero        String   @unique
-  fechaRequest  DateTime @default(now())
+  id            String         @id @default(cuid())
+  numero        String         @unique
+  fechaRequest  DateTime       @default(now())
   tipoCarga     String
   cantidad      Float
   origen        String
   destino       String
-  estado        String   @default("PENDIENTE") // PENDIENTE, ASIGNADA, COMPLETADA
+  estado        String         @default("PENDIENTE") // PENDIENTE, ASIGNADA, COMPLETADA
   
   viajeId       String?
-  viaje         Viaje?   @relation(fields: [viajeId], references: [id], onDelete: SetNull)
+  viaje         Viaje?         @relation(fields: [viajeId], references: [id], onDelete: SetNull)
   
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  reservas      ReservaStock[]
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   
   @@map("solicitudes_logistica")
 }
@@ -498,18 +501,44 @@ model Viaje {
 }
 
 model Remito {
-  id          String   @id @default(cuid())
-  numero      String   @unique
-  fecha       DateTime @default(now())
+  id           String    @id @default(cuid())
+  numero       String    @unique
+  fecha        DateTime  @default(now())
   destinatario String
-  direccion   String?
-  ciudad      String?
-  provincia   String?
+  direccion    String?
+  ciudad       String?
+  provincia    String?
   
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  firmaUrl     String?
+  firmadoAt    DateTime?
+  firmadoPor   String?
+  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   
   @@map("remitos_logistica")
+}
+
+model ReservaStock {
+  id            String              @id @default(cuid())
+  numero        String              @unique
+  cantidad      Float
+  estado        String              @default("ACTIVA") // ACTIVA, CONSUMIDA, CANCELADA
+  observaciones String?
+  
+  referenciaId  String
+  referencia    Referencia          @relation(fields: [referenciaId], references: [id])
+  
+  warehouseId   String
+  warehouse     Warehouse           @relation(fields: [warehouseId], references: [id])
+  
+  solicitudId   String?
+  solicitud     SolicitudLogistica? @relation(fields: [solicitudId], references: [id], onDelete: SetNull)
+  
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  
+  @@map("reservas_stock")
 }
 
 // ==========================================
