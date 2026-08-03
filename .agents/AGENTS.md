@@ -36,12 +36,13 @@ Toda entrada de CUIT en altas de apicultores o consultas debe ser validada media
 *   **Geometría Piramidal de Estiva**: La capacidad total de la estiba se calcula reduciendo 2 tambores (1 par) por nivel de elevación para estabilidad física:
     $$\text{Capacidad Nivel } s = \max(0, \text{baseCapacity} - (s - 1) \times 2)$$
     *Para `maxLevels: 5` y `baseCapacity: 44`, el total ocupado es $44 + 42 + 40 + 38 + 36 = 200 \text{ tambores}$.*
-*   **Nomenclatura Humana de Posición (Formato Corto)**: Las posiciones deben ser representadas bajo la fórmula exacta `[Estiba]-[Lado]-P[Par]-U[Unidad]`:
+*   **Nomenclatura Humana de Posición (`[Estiba]-[Lado]-P[Piso]-U[Ubicación]`)**:
     *   **Estiba** (ej. `E39`).
     *   **Lado/Cara**: `D` (Derecho, para posiciones impares) o `I` (Izquierdo, para posiciones pares).
-    *   **Par**: `P1`, `P2`, ... `P22` (índice del par en la fila `Math.ceil(posicion / 2)`).
-    *   **Unidad**: `U1` (primer tambor del par) o `U2` (segundo tambor del par).
-    *   *Ejemplo real*: `E39-D-P1-U1` (Estiba 39, Lado Derecho, Par 1, Unidad 1).
+    *   **P (Piso / Nivel)**: `P1`, `P2`, `P3`, `P4`, `P5` (indica el piso de elevación 1 al 5).
+    *   **U (Ubicación / Unidad)**: Índice del tambor en la fila.
+*   **Trabado Alternado en Pisos Pares (Zig-Zag)**: En los pisos impares (`P1`, `P3`, `P5`), la Ubicación `U` se cuenta en orden directo (`1, 2, 3...`). En los **pisos pares (`P2`, `P4`)**, la Ubicación `U` se invierte de sentido (`totalNivel - t + 1`) para representar el trabamiento físico cruzado de los tambores.
+    *   *Ejemplos reales*: `E39-D-P1-U1` (Piso 1, Ubicación 1), `E39-D-P2-U21` (Piso 2, Ubicación 21 invertida), `E39-D-P4-U19` (Piso 4, Ubicación 19 invertida).
 *   **Armado de Pares**: Los tambores se colocan exclusivamente **de a pares (2 tambores por celda)** compartiendo un `pairId`.
 *   Al armar una posición en la estiba, la API `/api/scan/suggest/:estivaId` debe proponer de forma predictiva la siguiente celda libre (`level` y `position`).
 *   La operación de colocación en estiva (`scanArmado`) requiere recibir dos códigos de tambor (`barrelCodes: [código1, código2]`), la ID de la estiba, el nivel y la posición.

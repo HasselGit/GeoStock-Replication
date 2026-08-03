@@ -28,11 +28,12 @@ El esquema de base de datos completo en formato Prisma se encuentra en [schema.p
 *   **Capacidad Piramidal Estricta**: La capacidad total decrece en 2 tambores por nivel para garantizar la estabilidad física:
     $$\text{Capacidad Nivel } s = \max(0, \text{baseCapacity} - (s - 1) \times 2)$$
     *Para `maxLevels: 5` y `baseCapacity: 44`, el total ocupado al 100% es $44 + 42 + 40 + 38 + 36 = 200 \text{ tambores}$.*
-*   **Nomenclatura Humana de Posición (Formato Corto)**: Algoritmo de concatenación `[Estiba]-[Lado]-P[Par]-U[Unidad]` (ejemplo real en visor 3D: `E39-D-P1-U1`):
+*   **Nomenclatura Humana de Posición (`[Estiba]-[Lado]-P[Piso]-U[Ubicación]`)**:
     *   `E39`: Código de Estiba.
     *   `D` / `I`: Lado Derecho (posiciones impares) / Izquierdo (posiciones pares).
-    *   `P1`: Número de Par (`P1` a `P22`).
-    *   `U1` / `U2`: Unidad/Tambor dentro del par.
+    *   `P1` a `P5`: **Piso / Nivel de Elevación** (Piso 1 al 5).
+    *   `U1` a `U22`: **Ubicación / Unidad** en la fila.
+*   **Trabado Alternado de Pisos Pares (Zig-Zag)**: En los pisos impares (`P1`, `P3`, `P5`), la Ubicación `U` se cuenta en orden directo (`1, 2, 3...`). En los **pisos pares (`P2`, `P4`)**, la Ubicación `U` se invierte (`total - posicion + 1`) para representar el trabado físico cruzado de tambores en la pirámide (ejemplos reales: `E39-D-P1-U1`, `E39-D-P2-U21`, `E39-D-P4-U19`).
 
 ---
 
