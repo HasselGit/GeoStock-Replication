@@ -12,7 +12,7 @@ flowchart TD
     Fase2 --> Fase3["Fase 3: Catálogos Base (Depósitos y Referencias)"]
     Fase3 --> Fase4["Fase 4: Módulo Apicultores (CUIT Módulo 11 + RENAPA)"]
     Fase4 --> Fase5["Fase 5: Módulo Recepciones, Pesaje y ZPL"]
-    Fase5 --> Fase6["Fase 6: Módulo Estivas y Escáner (Regla LIFO Pares)"]
+    Fase5 --> Fase6["Fase 6: Módulo Estivas, Visor 3D y Escáner (Regla LIFO Pares)"]
     Fase6 --> Fase7["Fase 7: Módulo Laboratorio y Canastos"]
     Fase7 --> Fase8["Fase 8: Módulo Compras e Integración Finnegans"]
     Fase8 --> Fase9["Fase 9: Módulo Logística, Reservas y Remitos"]
@@ -47,11 +47,13 @@ flowchart TD
 3. Implementar el submódulo de pesaje de balanza (`/api/barrels/pesaje/buscar` y `/api/barrels/pesaje/:id/confirmar`).
 4. Implementar el generador de etiquetas térmicas **ZPL** (`GET /api/barrels/:id/etiqueta`) para impresoras Zebra.
 
-### Paso 6: Armado y Desarmado de Estivas (Escáner LIFO)
+### Paso 6: Armado/Desarmado de Estivas, Visor 3D y Escáner (LIFO + Pirámide)
 1. Implementar la creación de celdas físicas de estiba (`/api/estivas`).
-2. Implementar la API predictiva de sugerencia de celda libre (`/api/scan/suggest/:estivaId`).
-3. Implementar el endpoint `/api/scan/armado` obligando a recibir tambores **de a pares (2 tambores)** asignando un `pairId`.
-4. Implementar la regla LIFO de desarmado `/api/scan/desarmado/suggest/:estivaId` y la validación en `/api/scan/desarmado` arrojando los errores estrictos: `"Retirás primero tambores superiores"` y `"[Código] no es el par del primero. Escaneá el compañero."`.
+2. Implementar el cálculo de **capacidad piramidal** ($\text{Capacidad Nivel } s = \max(0, \text{baseCapacity} - (s - 1) \times 2)$) resultando en 200 tambores para base 44 y 5 niveles.
+3. Implementar el formateador de posiciones cortas en lenguaje humano `[Estiba]-[Lado]-P[Par]-U[Unidad]` (ejemplo real: `E39-D-P1-U1`).
+4. Implementar la API predictiva de sugerencia de celda libre (`/api/scan/suggest/:estivaId`).
+5. Implementar el endpoint `/api/scan/armado` obligando a recibir tambores **de a pares (2 tambores)** asignando un `pairId`.
+6. Implementar la regla LIFO de desarmado `/api/scan/desarmado/suggest/:estivaId` y la validación en `/api/scan/desarmado` arrojando los errores estrictos: `"Retirás primero tambores superiores"` y `"[Código] no es el par del primero. Escaneá el compañero."`.
 
 ### Paso 7: Módulo de Laboratorio y Canastos
 1. Crear órdenes de laboratorio (`/api/laboratorio/iniciar`).

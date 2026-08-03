@@ -32,8 +32,17 @@ Toda entrada de CUIT en altas de apicultores o consultas debe ser validada media
 *   El CUIT debe formatearse y almacenarse sin guiones (11 caracteres numéricos) y validarse contra su último dígito verificador.
 *   No se deben permitir caracteres no numéricos en la persistencia.
 
-### B. Módulo de Escáner: Armado de Estivas
-*   Los tambores se colocan exclusivamente **de a pares (2 tambores)** por celda.
+### B. Módulo de Escáner y Visor 3D: Armado y Nomenclatura de Estivas
+*   **Geometría Piramidal de Estiva**: La capacidad total de la estiba se calcula reduciendo 2 tambores (1 par) por nivel de elevación para estabilidad física:
+    $$\text{Capacidad Nivel } s = \max(0, \text{baseCapacity} - (s - 1) \times 2)$$
+    *Para `maxLevels: 5` y `baseCapacity: 44`, el total ocupado es $44 + 42 + 40 + 38 + 36 = 200 \text{ tambores}$.*
+*   **Nomenclatura Humana de Posición (Formato Corto)**: Las posiciones deben ser representadas bajo la fórmula exacta `[Estiba]-[Lado]-P[Par]-U[Unidad]`:
+    *   **Estiba** (ej. `E39`).
+    *   **Lado/Cara**: `D` (Derecho, para posiciones impares) o `I` (Izquierdo, para posiciones pares).
+    *   **Par**: `P1`, `P2`, ... `P22` (índice del par en la fila `Math.ceil(posicion / 2)`).
+    *   **Unidad**: `U1` (primer tambor del par) o `U2` (segundo tambor del par).
+    *   *Ejemplo real*: `E39-D-P1-U1` (Estiba 39, Lado Derecho, Par 1, Unidad 1).
+*   **Armado de Pares**: Los tambores se colocan exclusivamente **de a pares (2 tambores por celda)** compartiendo un `pairId`.
 *   Al armar una posición en la estiba, la API `/api/scan/suggest/:estivaId` debe proponer de forma predictiva la siguiente celda libre (`level` y `position`).
 *   La operación de colocación en estiva (`scanArmado`) requiere recibir dos códigos de tambor (`barrelCodes: [código1, código2]`), la ID de la estiba, el nivel y la posición.
 
