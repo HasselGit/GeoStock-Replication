@@ -1,18 +1,17 @@
-# Secuencia de Armado de una Estiba desde 0 (Simetría Inversa con Desarmado)
+# Secuencia Real de Armado de Estivas (Regla de 4 Tambores de Base)
 
-Este documento detalla la **secuencia física exacta de las primeras 20 posiciones (10 parejas de tambores)** para construir/armar una estiba de miel desde cero (ejemplo `E39`), demostrando cómo el proceso de **Armado** es la **inversa perfecta del Desarmado** (Estructura tipo Pila / Stack LIFO).
+Este documento detalla la **secuencia física exacta de las primeras 20 posiciones (10 parejas de tambores)** para construir/armar una estiba de miel desde cero (ejemplo `E39`), incorporando la **Regla de Apoyo de 4 Tambores de Base** requerida para colocar cualquier celda en elevación.
 
 ---
 
-## 1. Regla de Simetría Inversa (Armado vs. Desarmado)
+## 1. Regla Física de Apoyo (4 Tambores de Base por 1 Par Superior)
 
-En la operativa física de depósito:
-*   **Desarmado (Cúpula a Base por Sección)**: Desmonta desde la cúpula superior del frente hacia el piso base:
-    `P5-U1` $\rightarrow$ `P4-U19` $\rightarrow$ `P3-U1` $\rightarrow$ `P2-U21` $\rightarrow$ `P1-U1`.
-*   **Armado (Base a Cúpula por Sección)**: Construye desde el piso base del frente elevándose hasta la cúpula:
-    `P1-U1` $\rightarrow$ `P2-U21` $\rightarrow$ `P3-U1` $\rightarrow$ `P4-U19` $\rightarrow$ `P5-U1`.
+Físicamente, los tambores de miel son cilíndricos y pesados. Para colocar un par de tambores en un piso elevado (ej. Piso 2), este **debe apoyarse sobre el valle/cuna que forman 2 pares contiguos (4 tambores de base)** del piso inferior.
 
-Una vez completada la **Sección 1 (Cabecera Frente)** hasta el Piso 5, el autoelevador retrocede un paso y construye la **Sección 2** (`P1-U2` $\rightarrow$ `P2-U20` $\rightarrow$ `P3-U2` $\rightarrow$ `P4-U18` $\rightarrow$ `P5-U2`).
+*   Para apoyar **`E39-D-P2-U1` y `E39-I-P2-U1`** (Piso 2), se requiere tener colocados previamente:
+    1.  `E39-D-P1-U22` y `E39-I-P1-U22` (Par Base 22 del Piso 1)
+    2.  `E39-D-P1-U21` y `E39-I-P1-U21` (Par Base 21 del Piso 1)
+*   **Total de Tambores de Base Requeridos**: 4 tambores (2 parejas del Piso 1).
 
 ---
 
@@ -20,49 +19,48 @@ Una vez completada la **Sección 1 (Cabecera Frente)** hasta el Piso 5, el autoe
 
 ```mermaid
 flowchart TD
-    subgraph Sec1 ["SECCIÓN 1 (FRENTE / CABECERA - BASE A CÚPULA)"]
-        A1["1. E39-D-P1-U1 & E39-I-P1-U1 (Piso 1 Base)"] --> A2["2. E39-D-P2-U21 & E39-I-P2-U21 (Piso 2 - Invertido)"]
-        A2 --> A3["3. E39-D-P3-U1 & E39-I-P3-U1 (Piso 3)"]
-        A3 --> A4["4. E39-D-P4-U19 & E39-I-P4-U19 (Piso 4 - Invertido)"]
-        A4 --> A5["5. E39-D-P5-U1 & E39-I-P5-U1 (Piso 5 Cúpula)"]
+    subgraph Base1 ["Paso 1: Colocación de Base en el Fondo (4 Tambores)"]
+        B1["1. E39-D-P1-U22 & E39-I-P1-U22 (Base Par 22)"] --> B2["2. E39-D-P1-U21 & E39-I-P1-U21 (Base Par 21)"]
     end
-    subgraph Sec2 ["SECCIÓN 2 (PROFUNDIDAD 2 - BASE A CÚPULA)"]
-        A5 --> B1["6. E39-D-P1-U2 & E39-I-P1-U2 (Piso 1 Base)"]
-        B1 --> B2["7. E39-D-P2-U20 & E39-I-P2-U20 (Piso 2 - Invertido)"]
-        B2 --> B3["8. E39-D-P3-U2 & E39-I-P3-U2 (Piso 3)"]
-        B3 --> B4["9. E39-D-P4-U18 & E39-I-P4-U18 (Piso 4 - Invertido)"]
-        B4 --> B5["10. E39-D-P5-U2 & E39-I-P5-U2 (Piso 5 Cúpula)"]
+    subgraph Piso2_1 ["Paso 2: Primer Par del Piso 2"]
+        B2 --> P2_1["3. E39-D-P2-U1 & E39-I-P2-U1 (Apoyado sobre Base 22 y 21)"]
+    end
+    subgraph Avance ["Paso 3: Avance Intercalado Triangular"]
+        P2_1 --> B3["4. E39-D-P1-U20 & E39-I-P1-U20 (Base Par 20)"]
+        B3 --> P2_2["5. E39-D-P2-U2 & E39-I-P2-U2 (Apoyado sobre Base 21 y 20)"]
+        P2_2 --> P3_1["6. E39-D-P3-U1 & E39-I-P3-U1 (Piso 3, apoyado sobre P2-U1 y P2-U2)"]
     end
 ```
 
-### Detalle de las 20 Posiciones en Orden Inverso Exacto:
+### Detalle Secuencial de las 20 Posiciones:
 
-| N° Orden | Posición Exacta en Sistema | Piso / Elevación | Lado | Ubicación (`U`) | Sección Operativa |
+| N° Orden | Posición Exacta en Sistema | Nivel / Elevación | Lado | Ubicación (`U`) | Función Física en el Armado |
 | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1** | `E39-D-P1-U1` | **Piso 1 (Base)** | Derecho | `U1` | **Sección 1 (Base Frente)** |
-| **2** | `E39-I-P1-U1` | **Piso 1 (Base)** | Izquierdo | `U1` | **Sección 1 (Base Frente)** |
-| **3** | `E39-D-P2-U21` | **Piso 2** | Derecho | `U21` (Invertido) | **Sección 1 (Elevación 2)** |
-| **4** | `E39-I-P2-U21` | **Piso 2** | Izquierdo | `U21` (Invertido) | **Sección 1 (Elevación 2)** |
-| **5** | `E39-D-P3-U1` | **Piso 3** | Derecho | `U1` | **Sección 1 (Elevación 3)** |
-| **6** | `E39-I-P3-U1` | **Piso 3** | Izquierdo | `U1` | **Sección 1 (Elevación 3)** |
-| **7** | `E39-D-P4-U19` | **Piso 4** | Derecho | `U19` (Invertido) | **Sección 1 (Elevación 4)** |
-| **8** | `E39-I-P4-U19` | **Piso 4** | Izquierdo | `U19` (Invertido) | **Sección 1 (Elevación 4)** |
-| **9** | `E39-D-P5-U1` | **Piso 5 (Cúpula)** | Derecho | `U1` | **Sección 1 (Cúpula Frente)** |
-| **10** | `E39-I-P5-U1` | **Piso 5 (Cúpula)** | Izquierdo | `U1` | **Sección 1 (Cúpula Frente)** |
-| **11** | `E39-D-P1-U2` | **Piso 1 (Base)** | Derecho | `U2` | **Sección 2 (Base Profundidad 2)** |
-| **12** | `E39-I-P1-U2` | **Piso 1 (Base)** | Izquierdo | `U2` | **Sección 2 (Base Profundidad 2)** |
-| **13** | `E39-D-P2-U20` | **Piso 2** | Derecho | `U20` (Invertido) | **Sección 2 (Elevación 2)** |
-| **14** | `E39-I-P2-U20` | **Piso 2** | Izquierdo | `U20` (Invertido) | **Sección 2 (Elevación 2)** |
-| **15** | `E39-D-P3-U2` | **Piso 3** | Derecho | `U2` | **Sección 2 (Elevación 3)** |
-| **16** | `E39-I-P3-U2` | **Piso 3** | Izquierdo | `U2` | **Sección 2 (Elevación 3)** |
-| **17** | `E39-D-P4-U18` | **Piso 4** | Derecho | `U18` (Invertido) | **Sección 2 (Elevación 4)** |
-| **18** | `E39-I-P4-U18` | **Piso 4** | Izquierdo | `U18` (Invertido) | **Sección 2 (Elevación 4)** |
-| **19** | `E39-D-P5-U2` | **Piso 5 (Cúpula)** | Derecho | `U2` | **Sección 2 (Cúpula Profundidad 2)** |
-| **20** | `E39-I-P5-U2` | **Piso 5 (Cúpula)** | Izquierdo | `U2` | **Sección 2 (Cúpula Profundidad 2)** |
+| **1** | `E39-D-P1-U22` | **Piso 1 (Base)** | Derecho | `U22` | Base Par 22 (Primeros 2 tambores en suelo) |
+| **2** | `E39-I-P1-U22` | **Piso 1 (Base)** | Izquierdo | `U22` | Base Par 22 (Compañero) |
+| **3** | `E39-D-P1-U21` | **Piso 1 (Base)** | Derecho | `U21` | Base Par 21 (Forma el valle de 4 tambores) |
+| **4** | `E39-I-P1-U21` | **Piso 1 (Base)** | Izquierdo | `U21` | Base Par 21 (Compañero) |
+| **5** | `E39-D-P2-U1` | **Piso 2** | Derecho | `U1` | **Primer Par de Piso 2 (Apoyado sobre 4 de base)** |
+| **6** | `E39-I-P2-U1` | **Piso 2** | Izquierdo | `U1` | **Compañero de Piso 2** |
+| **7** | `E39-D-P1-U20` | **Piso 1 (Base)** | Derecho | `U20` | Base Par 20 (Habilita cuna para P2-U2) |
+| **8** | `E39-I-P1-U20` | **Piso 1 (Base)** | Izquierdo | `U20` | Base Par 20 (Compañero) |
+| **9** | `E39-D-P2-U2` | **Piso 2** | Derecho | `U2` | Segundo Par de Piso 2 (Apoyado en P1-U21/U20) |
+| **10** | `E39-I-P2-U2` | **Piso 2** | Izquierdo | `U2` | Compañero de Piso 2 |
+| **11** | `E39-D-P3-U1` | **Piso 3** | Derecho | `U1` | **Primer Par de Piso 3 (Apoyado sobre P2-U1/U2)** |
+| **12** | `E39-I-P3-U1` | **Piso 3** | Izquierdo | `U1` | **Compañero de Piso 3** |
+| **13** | `E39-D-P1-U19` | **Piso 1 (Base)** | Derecho | `U19` | Base Par 19 (Habilita cuna para P2-U3) |
+| **14** | `E39-I-P1-U19` | **Piso 1 (Base)** | Izquierdo | `U19` | Base Par 19 (Compañero) |
+| **15** | `E39-D-P2-U3` | **Piso 2** | Derecho | `U3` | Tercer Par de Piso 2 (Apoyado en P1-U20/U19) |
+| **16** | `E39-I-P2-U3` | **Piso 2** | Izquierdo | `U3` | Compañero de Piso 2 |
+| **17** | `E39-D-P3-U2` | **Piso 3** | Derecho | `U2` | Segundo Par de Piso 3 (Apoyado en P2-U2/U3) |
+| **18** | `E39-I-P3-U2` | **Piso 3** | Izquierdo | `U2` | Compañero de Piso 3 |
+| **19** | `E39-D-P4-U1` | **Piso 4** | Derecho | `U1` | **Primer Par de Piso 4 (Apoyado sobre P3-U1/U2)** |
+| **20** | `E39-I-P4-U1` | **Piso 4** | Izquierdo | `U1` | **Compañero de Piso 4** |
 
 ---
 
 > [!IMPORTANT]
-> Esta secuencia demuestra la **simetría perfecta LIFO (Pila)**:
-> *   La primera pareja colocada en el desarmado (`P5-U1`) es la última colocada en el armado de la Sección 1.
-> *   La última pareja en retirarse en el desarmado (`P1-U1`) es la primera colocada al armar desde 0.
+> Esta secuencia de apilamiento en escalera/triangular demuestra cómo se construye la pirámide física:
+> *   Se colocan 4 tambores de base (`P1-U22` + `P1-U21`).
+> *   Se apoya la primera pareja del Piso 2 (`P2-U1`).
+> *   Al avanzar la base a `P1-U20`, se apoya `P2-U2`, lo que genera el valle de 4 tambores en el Piso 2 para apoyar la primera pareja del Piso 3 (`P3-U1`), y así sucesivamente hasta coronar la cúpula (`P5`).

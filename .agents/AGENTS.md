@@ -42,17 +42,18 @@ Toda entrada de CUIT en altas de apicultores o consultas debe ser validada media
     *   **P (Piso / Nivel)**: `P1`, `P2`, `P3`, `P4`, `P5` (indica el piso de elevación 1 al 5).
     *   **U (Ubicación / Unidad)**: Índice del tambor en la fila.
 *   **Trabado Alternado en Pisos Pares (Zig-Zag)**: En los pisos impares (`P1`, `P3`, `P5`), la Ubicación `U` se cuenta en orden directo (`1, 2, 3...`). En los **pisos pares (`P2`, `P4`)**, la Ubicación `U` se invierte de sentido (`totalNivel - t + 1`) para representar el trabamiento físico cruzado de los tambores.
-    *   *Ejemplos reales*: `E39-D-P1-U1` (Piso 1, Ubicación 1), `E39-D-P2-U21` (Piso 2, Ubicación 21 invertida), `E39-D-P4-U19` (Piso 4, Ubicación 19 invertida).
-*   **Armado de Pares**: Los tambores se colocan exclusivamente **de a pares (2 tambores por celda)** compartiendo un `pairId`.
-*   Al armar una posición en la estiba, la API `/api/scan/suggest/:estivaId` debe proponer de forma predictiva la siguiente celda libre (`level` y `position`).
-*   La operación de colocación en estiva (`scanArmado`) requiere recibir dos códigos de tambor (`barrelCodes: [código1, código2]`), la ID de la estiba, el nivel y la posición.
 
-### C. Módulo de Escáner: Armado y Desarmado de Estivas (Inversión Estricta LIFO/FIFO)
-*   **Simetría Inversa Operativa**: El proceso de **Armado** y **Desarmado** son **exactamente inversos** el uno del otro (Estructura de Pila LIFO / Stack):
-    *   **Desarmado (Cúpula a Base por Sección)**: `P5-U1` $\rightarrow$ `P4-U19` $\rightarrow$ `P3-U1` $\rightarrow$ `P2-U21` $\rightarrow$ `P1-U1` (Sección 1), luego avanza a Sección 2.
-    *   **Armado (Base a Cúpula por Sección)**: `P1-U1` $\rightarrow$ `P2-U21` $\rightarrow$ `P3-U1` $\rightarrow$ `P4-U19` $\rightarrow$ `P5-U1` (Sección 1), luego avanza a Sección 2.
-*   **Validación de Obstrucción Física**: No se permite retirar tambores si poseen carga directamente encima o si no se ha liberado el acceso de cabecera. La UI debe arrojar el error: `"Retirás primero tambores superiores"`.
-*   **Validación de Compañero**: El desarmado requiere el retiro del par completo (`pairId`). Si el segundo tambor escaneado no coincide con el compañero del primero, la UI arremete el error arrojado: `"[Código] no es el par del primero. Escaneá el compañero."`.
+### C. Módulo de Escáner: Armado y Desarmado (Regla de Soporte de 4 Tambores de Base)
+*   **Regla Física de Apoyo (4 Tambores de Base por 1 Par Superior)**: Para poder colocar un par en un nivel superior (ej. `P2-U1`), se requiere obligatoriamente tener colocados los **2 pares contiguos del piso inferior (4 tambores de base)** que forman la cuna o valle de apoyo (ej. `P1-U22` y `P1-U21` para apoyar `P2-U1`).
+*   **Secuencia de Armado Intercalado (Triangular)**:
+    1.  `E39-D-P1-U22` y `E39-I-P1-U22` (Par Base 22 en el fondo)
+    2.  `E39-D-P1-U21` y `E39-I-P1-U21` (Par Base 21 en el fondo)
+    3.  `E39-D-P2-U1` y `E39-I-P2-U1` (Par 1 del Piso 2, apoyado sobre los 4 tambores de `P1-U22` y `P1-U21`)
+    4.  `E39-D-P1-U20` y `E39-I-P1-U20` (Par Base 20)
+    5.  `E39-D-P2-U2` y `E39-I-P2-U2` (Par 2 del Piso 2, apoyado sobre `P1-U21` y `P1-U20`)
+    6.  `E39-D-P3-U1` y `E39-I-P3-U1` (Par 1 del Piso 3, apoyado sobre los 4 tambores de `P2-U1` y `P2-U2`)
+*   **Validación de Obstrucción Física**: No se permite colocar ni retirar tambores si no se cumplen las condiciones físicas de apoyo inferior o despeje de cabecera. La UI debe arrojar el error: `"Retirás primero tambores superiores"`.
+*   **Validación de Compañero**: Requiere el ingreso de ambos tambores del par (`pairId`). Si el segundo tambor no coincide con el compañero del primero, la UI arremete el error: `"[Código] no es el par del primero. Escaneá el compañero."`.
 
 ### D. Módulo de Compras (Liquidación e Integración ERP)
 *   **Liquidación de Precios**: La liquidación se debe calcular sumando el importe de los tambores según su clasificación por calidad físico-química (`CLARA`, `INTERMEDIA`, `OSCURA`), multiplicando el precio respectivo definido en la orden por los kilos netos del tambor.
