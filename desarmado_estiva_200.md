@@ -1,86 +1,67 @@
-# Orden Completo de Desarmado de una Estiba de 200 Tambores (GeoStock)
+# Secuencia Real de Desarmado de Estivas por Cabecera (GeoStock)
 
-Este documento detalla la **secuencia exacta de desarmado** de una estiba completa de 200 tambores de miel (ejemplo `E39`), aplicando la regla **LIFO (Last-In, First-Out)** de arriba hacia abajo y respetando el patrón de **trabado alternado (Zig-Zag)** en pisos pares.
-
----
-
-## 1. Reglas Inviolables de Desarmado
-
-1.  **Orden Descendente de Pisos (LIFO Vertical)**:
-    *   No se puede retirar ningún tambor de un piso inferior mientras existan tambores en un piso superior.
-    *   Secuencia de Pisos: **P5 $\rightarrow$ P4 $\rightarrow$ P3 $\rightarrow$ P2 $\rightarrow$ P1**.
-2.  **Retiro en Pares Obligatorios**:
-    *   Cada celda se desarma retirando su pareja de tambores completa (compartiendo el mismo `pairId`).
-3.  **Dirección de Ubicación (`U`) por Piso**:
-    *   **Pisos Impares (`P5`, `P3`, `P1`)**: Conteo en orden **directo** (`U1` $\rightarrow$ `U_Max`).
-    *   **Pisos Pares (`P4`, `P2`)**: Conteo en orden **invertido / Zig-Zag** (`U_Max` $\rightarrow$ `U1`).
+Este documento detalla la **secuencia física real de desarmado por cabecera/sección vertical** de una estiba completa de 200 tambores (ej. `E39`), tal como la opera un autoelevador (clarkista) desde el frente del pasillo de depósito.
 
 ---
 
-## 2. Secuencia Paso a Paso de las 100 Parejas (200 Tambores)
+## 1. Lógica Operativa de Desarmado por Cabecera
+
+Físicamente, un autoelevador en depósito no puede volar ni avanzar a lo largo de una estiba profunda de 30 metros de largo sin despejar el acceso.
+
+Por esta razón, el desarmado se realiza **de cabecera a fondo por cortes verticales**:
+1. El autoelevador se ubica en el frente del pasillo (`U1` / Cabecera).
+2. Desmonta la primera columna vertical del frente **de arriba hacia abajo** (Piso 5 $\rightarrow$ Piso 4 $\rightarrow$ Piso 3 $\rightarrow$ Piso 2 $\rightarrow$ Piso 1).
+3. Una vez despejado el suelo de esa primera sección (`U1`), el camión avanza un paso y desmonta la segunda sección (`U2`), repitiendo el proceso vertical de cúpula a piso base.
+
+---
+
+## 2. Lista Exacta de las Primeras 20 Posiciones a Retirar
+
+A continuación se detalla la lista exacta de las **primeras 20 posiciones (10 parejas de tambores)** que retirará el autoelevador al desarmar la estiba `E39` de 200 tambores:
 
 ```mermaid
 flowchart TD
-    P5["Piso 5: 36 Tambores (18 Pares) Directo U1 -> U18"] --> P4["Piso 4: 38 Tambores (19 Pares) Invertido U19 -> U1"]
-    P4 --> P3["Piso 3: 40 Tambores (20 Pares) Directo U1 -> U20"]
-    P3 --> P2["Piso 2: 42 Tambores (21 Pares) Invertido U21 -> U1"]
-    P2 --> P1["Piso 1: 44 Tambores (22 Pares) Directo U1 -> U22"]
-    P1 --> Vacía["ESTIVA COMPLETAMENTE DESARMADA (200 Tambores)"]
+    subgraph Sec1 ["SECCIÓN 1 (FRENTE / CABECERA - 10 TAMBORES)"]
+        A1["1. E39-D-P5-U1 & E39-I-P5-U1 (Piso 5 Cúpula)"] --> A2["2. E39-D-P4-U19 & E39-I-P4-U19 (Piso 4 - Invertido)"]
+        A2 --> A3["3. E39-D-P3-U1 & E39-I-P3-U1 (Piso 3)"]
+        A3 --> A4["4. E39-D-P2-U21 & E39-I-P2-U21 (Piso 2 - Invertido)"]
+        A4 --> A5["5. E39-D-P1-U1 & E39-I-P1-U1 (Piso 1 Base)"]
+    end
+    subgraph Sec2 ["SECCIÓN 2 (PROFUNDIDAD 2 - 10 TAMBORES)"]
+        A5 --> B1["6. E39-D-P5-U2 & E39-I-P5-U2 (Piso 5 Cúpula)"]
+        B1 --> B2["7. E39-D-P4-U18 & E39-I-P4-U18 (Piso 4 - Invertido)"]
+        B2 --> B3["8. E39-D-P3-U2 & E39-I-P3-U2 (Piso 3)"]
+        B3 --> B4["9. E39-D-P2-U20 & E39-I-P2-U20 (Piso 2 - Invertido)"]
+        B4 --> B5["10. E39-D-P1-U2 & E39-I-P1-U2 (Piso 1 Base)"]
+    end
 ```
 
----
+### Detalle de las 20 Posiciones:
 
-### ETAPA 1: Piso 5 / Nivel Superior (`P5`) — 36 Tambores (18 Pares)
-*Sentido: Directo (`U1` a `U18`)*
-
-1.  `E39-D-P5-U1` y `E39-I-P5-U1` (Par 1)
-2.  `E39-D-P5-U2` y `E39-I-P5-U2` (Par 2)
-3.  `E39-D-P5-U3` y `E39-I-P5-U3` (Par 3)
-4.  ...
-18. `E39-D-P5-U18` y `E39-I-P5-U18` (Par 18)
-*Subtotal acumulado desarmado: 36 tambores.*
-
----
-
-### ETAPA 2: Piso 4 (`P4`) — 38 Tambores (19 Pares)
-*Sentido: Invertido / Zig-Zag (`U19` a `U1`)*
-
-19. `E39-D-P4-U19` y `E39-I-P4-U19` *(Ejemplo real de captura: Par 19)*
-20. `E39-D-P4-U18` y `E39-I-P4-U18`
-21. `E39-D-P4-U17` y `E39-I-P4-U17`
-22. ...
-37. `E39-D-P4-U1` y `E39-I-P4-U1`
-*Subtotal acumulado desarmado: 74 tambores.*
-
----
-
-### ETAPA 3: Piso 3 (`P3`) — 40 Tambores (20 Pares)
-*Sentido: Directo (`U1` a `U20`)*
-
-38. `E39-D-P3-U1` y `E39-I-P3-U1`
-39. `E39-D-P3-U2` y `E39-I-P3-U2`
-40. ...
-57. `E39-D-P3-U20` y `E39-I-P3-U20`
-*Subtotal acumulado desarmado: 114 tambores.*
+| N° Orden | Posición Exacta en Sistema | Piso / Elevación | Lado | Unidad | Sección / Profundidad |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| **1** | `E39-D-P5-U1` | **Piso 5 (Cúpula)** | Derecho | U1 | **Sección 1 (Frente)** |
+| **2** | `E39-I-P5-U1` | **Piso 5 (Cúpula)** | Izquierdo | U1 | **Sección 1 (Frente)** |
+| **3** | `E39-D-P4-U19` | **Piso 4** | Derecho | U19 (Frente) | **Sección 1 (Frente)** |
+| **4** | `E39-I-P4-U19` | **Piso 4** | Izquierdo | U19 (Frente) | **Sección 1 (Frente)** |
+| **5** | `E39-D-P3-U1` | **Piso 3** | Derecho | U1 | **Sección 1 (Frente)** |
+| **6** | `E39-I-P3-U1` | **Piso 3** | Izquierdo | U1 | **Sección 1 (Frente)** |
+| **7** | `E39-D-P2-U21` | **Piso 2** | Derecho | U21 (Frente) | **Sección 1 (Frente)** |
+| **8** | `E39-I-P2-U21` | **Piso 2** | Izquierdo | U21 (Frente) | **Sección 1 (Frente)** |
+| **9** | `E39-D-P1-U1` | **Piso 1 (Base)** | Derecho | U1 | **Sección 1 (Frente)** |
+| **10** | `E39-I-P1-U1` | **Piso 1 (Base)** | Izquierdo | U1 | **Sección 1 (Frente)** |
+| **11** | `E39-D-P5-U2` | **Piso 5 (Cúpula)** | Derecho | U2 | **Sección 2 (Avanza)** |
+| **12** | `E39-I-P5-U2` | **Piso 5 (Cúpula)** | Izquierdo | U2 | **Sección 2 (Avanza)** |
+| **13** | `E39-D-P4-U18` | **Piso 4** | Derecho | U18 | **Sección 2 (Avanza)** |
+| **14** | `E39-I-P4-U18` | **Piso 4** | Izquierdo | U18 | **Sección 2 (Avanza)** |
+| **15** | `E39-D-P3-U2` | **Piso 3** | Derecho | U2 | **Sección 2 (Avanza)** |
+| **16** | `E39-I-P3-U2` | **Piso 3** | Izquierdo | U2 | **Sección 2 (Avanza)** |
+| **17** | `E39-D-P2-U20` | **Piso 2** | Derecho | U20 | **Sección 2 (Avanza)** |
+| **18** | `E39-I-P2-U20` | **Piso 2** | Izquierdo | U20 | **Sección 2 (Avanza)** |
+| **19** | `E39-D-P1-U2` | **Piso 1 (Base)** | Derecho | U2 | **Sección 2 (Avanza)** |
+| **20** | `E39-I-P1-U2` | **Piso 1 (Base)** | Izquierdo | U2 | **Sección 2 (Avanza)** |
 
 ---
 
-### ETAPA 4: Piso 2 (`P2`) — 42 Tambores (21 Pares)
-*Sentido: Invertido / Zig-Zag (`U21` a `U1`)*
-
-58. `E39-D-P2-U21` y `E39-I-P2-U21` *(Ejemplo real de captura: Par 21)*
-59. `E39-D-P2-U20` y `E39-I-P2-U20`
-60. ...
-78. `E39-D-P2-U1` y `E39-I-P2-U1`
-*Subtotal acumulado desarmado: 156 tambores.*
-
----
-
-### ETAPA 5: Piso 1 / Base Inferior (`P1`) — 44 Tambores (22 Pares)
-*Sentido: Directo (`U1` a `U22`)*
-
-79. `E39-D-P1-U1` y `E39-I-P1-U1` *(Ejemplo real de captura: Par 1)*
-80. `E39-D-P1-U2` y `E39-I-P1-U2`
-81. ...
-100. `E39-D-P1-U22` y `E39-I-P1-U22`
-*TOTAL FINAL DESARMADO: 200 TAMBORES (100 PARES). ESTIVA TOTALMENTE VACÍA.*
+> [!NOTE]
+> Al completar estas **primeras 20 posiciones**, el autoelevador ha despejado totalmente las 2 primeras columnas verticales en la entrada del pasillo (20 tambores de 200 desarmados) y puede continuar con la Sección 3 (`U3`, `U17`, `U3`, `U19`, `U3`).

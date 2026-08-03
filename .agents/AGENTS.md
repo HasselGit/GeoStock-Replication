@@ -47,10 +47,16 @@ Toda entrada de CUIT en altas de apicultores o consultas debe ser validada media
 *   Al armar una posición en la estiba, la API `/api/scan/suggest/:estivaId` debe proponer de forma predictiva la siguiente celda libre (`level` y `position`).
 *   La operación de colocación en estiva (`scanArmado`) requiere recibir dos códigos de tambor (`barrelCodes: [código1, código2]`), la ID de la estiba, el nivel y la posición.
 
-### C. Módulo de Escáner: Desarmado de Estivas (Regla LIFO)
-*   **Validación de Obstrucción Física**: No se permite retirar tambores ubicados en niveles inferiores si hay tambores colocados encima de ellos en la misma estiba.
-*   La API del backend debe calcular dinámicamente qué tambores son removibles (`removableBarrelIds`). Si el operario escanea un tambor que no se encuentra en esta lista, la UI **debe** arrojar el error: `"Retirás primero tambores superiores"`.
-*   **Validación de Compañero**: El escaneo requiere el retiro del par completo. Si el operario escanea el primer tambor de una celda, el segundo tambor escaneado **debe** corresponder al compañero del mismo `pairId` registrado. Si no coincide, la UI **debe** arrojar el error: `"[Código] no es el par del primero. Escaneá el compañero."`.
+### C. Módulo de Escáner: Desarmado de Estivas por Cabecera (Regla LIFO por Secciones)
+*   **Secuencia de Desarmado Físico (Por Cabecera / Sección Vertical)**: El autoelevador desmantela la estiba desde el **frente (cabecera)** hacia el fondo por secciones verticales. Para cada columna/sección del frente, se retira de arriba a abajo (P5 $\rightarrow$ P4 $\rightarrow$ P3 $\rightarrow$ P2 $\rightarrow$ P1) antes de avanzar a la siguiente profundidad:
+    1.  `E39-D-P5-U1` y `E39-I-P5-U1` (Piso 5, Frente)
+    2.  `E39-D-P4-U19` y `E39-I-P4-U19` (Piso 4, Frente - Invertido)
+    3.  `E39-D-P3-U1` y `E39-I-P3-U1` (Piso 3, Frente)
+    4.  `E39-D-P2-U21` y `E39-I-P2-U21` (Piso 2, Frente - Invertido)
+    5.  `E39-D-P1-U1` y `E39-I-P1-U1` (Piso 1, Frente)
+    6.  *Una vez liberado el frente (piso a piso), se avanza a la siguiente posición en profundidad (`U2`, `U18`, `U2`, `U20`, `U2`).*
+*   **Validación de Obstrucción Física**: No se permite retirar tambores si poseen carga directamente encima o si no se ha liberado el acceso de cabecera. La UI debe arrojar el error: `"Retirás primero tambores superiores"`.
+*   **Validación de Compañero**: El desarmado requiere el retiro del par completo (`pairId`). Si el segundo tambor escaneado no coincide con el compañero del primero, la UI arremete el error arrojado: `"[Código] no es el par del primero. Escaneá el compañero."`.
 
 ### D. Módulo de Compras (Liquidación e Integración ERP)
 *   **Liquidación de Precios**: La liquidación se debe calcular sumando el importe de los tambores según su clasificación por calidad físico-química (`CLARA`, `INTERMEDIA`, `OSCURA`), multiplicando el precio respectivo definido en la orden por los kilos netos del tambor.
