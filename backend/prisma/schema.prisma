@@ -138,6 +138,9 @@ model Barrel {
   ordenCompraId        String?
   ordenCompra          OrdenCompra?     @relation(fields: [ordenCompraId], references: [id], onDelete: SetNull)
   
+  loteExportacionId    String?
+  loteExportacion      LoteExportacion? @relation(fields: [loteExportacionId], references: [id], onDelete: SetNull)
+  
   calidad              String?          // e.g. "CLARA"
   calidadSugerida      String?
   color                Float?
@@ -608,4 +611,18 @@ model Canasto {
   updatedAt DateTime             @updatedAt
   
   @@map("canastos")
+}
+
+model LoteExportacion {
+  id            String   @id @default(cuid())
+  codigo        String   @unique // e.g. EXP-2026-001
+  cliente       String?
+  destino       String?
+  observaciones String?
+  status        String   @default("DRAFT") // DRAFT, CONFIRMADO, ENVIADO
+  barrels       Barrel[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("lotes_exportacion")
 }

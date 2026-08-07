@@ -4,7 +4,7 @@ Este repositorio contiene el informe técnico de análisis, el esquema lógico c
 
 ---
 
-## 1. Esquema Completo de la Base de Datos
+## 1. Esquema Completo de la Base de Datos (26 Modelos)
 
 El sistema utiliza un modelo relacional de base de datos robusto (PostgreSQL) mapeado con Prisma ORM.
 
@@ -22,8 +22,9 @@ El esquema de base de datos completo en formato Prisma se encuentra en [schema.p
 *   **`Recepcion`**: ID (`cuid`), número autogenerado (ej. `R-2026-0004`), número de remito, fecha de ingreso, transportista, origen, persona que entrega, observaciones, status (`BORRADOR`, `PENDIENTE`, `FINALIZADA`), tambores esperados y disponibilidad del remito firmado digitalmente (PDF).
 *   **`Alert`**: Registro de control de calidad y vencimientos (ej. `RENAPA_VENCIDO`, `PARAMETRO_FUERA_DE_RANGO`), con estados `ACTIVA` o `RESUELTA`.
 
-### Módulo: Tambores, Visor 3D y Ubicación Física (Actualizado)
+### Módulo: Tambores, Lotes de Exportación, Visor 3D y Ubicación Física
 *   **`Barrel` (Tambor)**: Código de barra interno (ej. `G-2026-000029`), código SENASA, altura, producto, origen, lote, número de tambor, pesos (`grossWeight`, `netWeight`, `tara`), número de romaneo, calidad clasificada (`calidad`, ej. `CLARA`), parámetros químicos (`color` en mm Pfund, `humedad`, `hmf`), remuestreos y relaciones de estiba. Soporta eliminación física (`DELETE /barrels/:id`).
+*   **`LoteExportacion` (Nuevo 7-Ago)**: Agrupación de tambores para despachos de exportación (`EXP-2026-001`), cliente, destino, observaciones, estados `DRAFT`, `CONFIRMADO`, `ENVIADO`.
 *   **`Estiva`**: Códigos físicos de estiba (ej. `E39`), tipo (`DEFINITIVA`), accesos (`TWO_SIDES`), capacidad base (44 tambores) y 5 niveles de altura.
 *   **Capacidad Piramidal Estricta**: La capacidad total decrece en 2 tambores por nivel para garantizar la estabilidad física:
     $$\text{Capacidad Nivel } s = \max(0, \text{baseCapacity} - (s - 1) \times 2)$$
@@ -44,17 +45,23 @@ El esquema de base de datos completo en formato Prisma se encuentra en [schema.p
 *   `POST /api/logistica/reservas`: `{ referenciaId, warehouseId, cantidad, solicitudId, observaciones }` $\rightarrow$ Registra el apartado de stock.
 *   `GET /api/logistica/stock-disponible?referenciaId=...&warehouseId=...`: Retorna la fórmula de cálculo del inventario usable real: `{ total, reservado, enCarga, comprometido, disponible }`.
 
-### B. Escáner de Estivas
-*   `POST /api/scan/armado`: Exige recibir `barrelCodes: [código1, código2]` en pareja (`pairId`).
-*   `POST /api/scan/desarmado`: Aplica LIFO estricto. Lanza los errores: `"Retirás primero tambores superiores"` y `"[Código] no es el par del primero. Escaneá el compañero."`.
+### B. Lotes de Exportación y Descarga de Excel (7-Ago)
+*   `GET /api/almacenes/lotes-exportacion`: Listado de lotes de exportación.
+*   `GET /api/almacenes/lotes-exportacion/disponibles`: Tambores calificados y disponibles para exportación.
+*   `GET /api/almacenes/existencias/export`: Genera planilla Excel (`.xlsx`) de existencias por almacén.
+*   `GET /api/barrels/export`: Genera planilla Excel (`.xlsx`) completa del inventario de tambores.
+
+### C. Escáner de Estivas
+*   `POST /api/scan/armado`: Exige recibir `barrelCodes: [código1, código2]` en pareja (`pairId`). Exige tener 4 tambores de apoyo en el nivel inferior antes de elevar.
+*   `POST /api/scan/desarmado`: Aplica LIFO estricto por secciones de cabecera. Lanza los errores: `"Retirás primero tambores superiores"` y `"[Código] no es el par del primero. Escaneá el compañero."`.
 
 ---
 
 ## 3. Guía de Desarrollo para Agentes de IA
 
 ### Estructura de Rutas API a Implementar
-1.  **Auth**: `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`.
+1.  **Auth**: `/api/auth/login` (admite `{ email, password }`), `/api/auth/logout`, `/api/auth/me`.
 2.  **Compras y Padrón**: `/api/compra/emisores`, `/api/compra/padron/estado`, `/api/compra/padron/sincronizar`, `/api/compra/ordenes` (GET, POST, PATCH, DELETE), `/api/compra/ordenes/:id/tambores` (POST, DELETE), `/api/compra/tambores/:id/calidad` (PATCH), `/api/compra/ordenes/:id/facturas` (POST, DELETE), `/api/compra/ordenes/:id/finnegans/push` (POST).
-3.  **Almacenes y Estivas**: `/api/almacenes`, `/api/estivas` (GET, POST, GET `/:id/structure`), `/api/scan/suggest/:id`, `/api/scan/armado` (POST), `/api/scan/desarmado` (POST).
+3.  **Almacenes, Lotes y Estivas**: `/api/almacenes`, `/api/almacenes/lotes-exportacion`, `/api/almacenes/lotes-exportacion/disponibles`, `/api/almacenes/existencias/export`, `/api/barrels/export`, `/api/estivas` (GET, POST, GET `/:id/structure`), `/api/scan/suggest/:id`, `/api/scan/armado` (POST), `/api/scan/desarmado` (POST).
 4.  **Logística y Reservas**: `/api/logistica/choferes`, `/api/logistica/solicitudes`, `/api/logistica/cargas`, `/api/logistica/viajes`, `/api/logistica/remitos` (GET, POST, DELETE, POST `/firma`), `/api/logistica/reservas` (GET, POST, POST `/consumir`, POST `/cancelar`), `/api/logistica/stock-disponible` (GET).
-5.  **Laboratorio y SENASA**: `/api/senasa/consultar` (POST), `/api/laboratorio/ordenes`, `/api/laboratorio/iniciar` (POST), `/api/laboratorio/canastos` (GET, POST, PATCH, DELETE, POST `/archivar`).
+5.  **Laboratorio y SENASA**: `/api/senasa/consultar` (POST), `/api/laboratorio/ordenes`, `/api/laboratorio/iniciar` (POST), `/api/laboratorio/canastos` (GET, POST, PATCH, DELETE, POST `/archivar`), `/api/laboratorio/canastos/sugerir-rotulo` (GET).
